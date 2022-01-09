@@ -2,8 +2,8 @@ package axieinfinity
 
 import (
 	"github.com/ethereum/go-ethereum/core/types"
-	axieCommon "github.com/jeronimobarea/simple-axieinfinity/common"
-	simpleCommon "github.com/jeronimobarea/simple-ethereum/common"
+	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
+	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
 )
 
 type (

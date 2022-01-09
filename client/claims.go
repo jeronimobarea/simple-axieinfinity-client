@@ -1,8 +1,8 @@
 package axieinfinity
 
 import (
-	axieCommon "github.com/jeronimobarea/simple-axieinfinity/common"
-	simpleCommon "github.com/jeronimobarea/simple-ethereum/common"
+	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
+	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
 )
 
 type (
@@ -26,14 +26,14 @@ func (svc *axiebuddyService) Claim(
 	return svc.API.Claim(address)
 }
 
-func (svc *axiebuddyService) GetClaimableSLP(
+func (svc *axiebuddyService) GetClaimableSlp(
 	address axieCommon.RoninAddress,
 ) (*ClaimableResponse, error) {
-	return svc.API.GetClaimableSLP(address)
+	return svc.API.GetClaimableSlp(address)
 }
 
-func (svc *axiebuddyService) GetClaimableBatchSLP(
+func (svc *axiebuddyService) GetClaimableBatchSlp(
 	addresses []axieCommon.RoninAddress,
 ) (*ClaimableBatchResponse, error) {
-	return svc.API.GetClaimableBatchSLP(addresses)
+	return svc.API.GetClaimableBatchSlp(addresses)
 }

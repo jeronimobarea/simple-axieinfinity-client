@@ -1,8 +1,8 @@
 package axieinfinity
 
 import (
-	axieCommon "github.com/jeronimobarea/simple-axieinfinity/common"
-	simpleCommon "github.com/jeronimobarea/simple-ethereum/common"
+	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
+	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
 )
 
 type (
@@ -16,8 +16,8 @@ type (
 
 	Service interface {
 		Claim(address simpleCommon.PrivateAddress) (*ClaimResponse, error)
-		GetClaimableSLP(address axieCommon.RoninAddress) (*ClaimableResponse, error)
-		GetClaimableBatchSLP(addresses []axieCommon.RoninAddress) (*ClaimableBatchResponse, error)
+		GetClaimableSlp(address axieCommon.RoninAddress) (*ClaimableResponse, error)
+		GetClaimableBatchSlp(addresses []axieCommon.RoninAddress) (*ClaimableBatchResponse, error)
 		MakePayment(manager axieCommon.RoninAddress, token string, scholar *ScholarPaymentData) (*PaymentResponse, error)
 		GetQR(address simpleCommon.PrivateAddress) (*QrResponse, error)
 		GetBalance(address axieCommon.RoninAddress, token string) (*BalanceResponse, error)

@@ -1,8 +1,8 @@
 package axieinfinity
 
 import (
-	axieCommon "github.com/jeronimobarea/simple-axieinfinity/common"
-	simpleCommon "github.com/jeronimobarea/simple-ethereum/common"
+	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
+	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -20,7 +20,7 @@ func (api *MockApi) Claim(address simpleCommon.PrivateAddress) (
 	return resp, args.Error(1)
 }
 
-func (api *MockApi) GetClaimableSLP(address axieCommon.RoninAddress) (
+func (api *MockApi) GetClaimableSlp(address axieCommon.RoninAddress) (
 	resp *ClaimableResponse, err error,
 ) {
 	args := api.Called(address)
@@ -30,7 +30,7 @@ func (api *MockApi) GetClaimableSLP(address axieCommon.RoninAddress) (
 	return resp, args.Error(1)
 }
 
-func (api *MockApi) GetClaimableBatchSLP(addresses []axieCommon.RoninAddress) (
+func (api *MockApi) GetClaimableBatchSlp(addresses []axieCommon.RoninAddress) (
 	resp *ClaimableBatchResponse, err error,
 ) {
 	args := api.Called(addresses)

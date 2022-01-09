@@ -1,31 +1,55 @@
 package axieinfinity
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"net/http"
 
-	axieAddress "github.com/jeronimobarea/simple-axieinfinity/address"
-	"github.com/jeronimobarea/simple-axieinfinity/claims"
-	axieCommon "github.com/jeronimobarea/simple-axieinfinity/common"
-	"github.com/jeronimobarea/simple-axieinfinity/payments"
-	axieMath "github.com/jeronimobarea/simple-axieinfinity/utils"
-	simpleEthClient "github.com/jeronimobarea/simple-ethereum-client/client"
-	simpleAddress "github.com/jeronimobarea/simple-ethereum/address"
-	simpleCommon "github.com/jeronimobarea/simple-ethereum/common"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/ethclient"
+	simpleClient "github.com/jeronimobarea/simple-ethereum-client/client"
+	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
 	"github.com/skip2/go-qrcode"
+
+	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
+	"github.com/jeronimobarea/simple-axieinfinity-client/payments"
+	"github.com/jeronimobarea/simple-axieinfinity-client/slp"
+	"github.com/jeronimobarea/simple-axieinfinity-client/utils"
 )
 
 type apiImplementation struct {
-	client simpleEthClient.Service
+	client    simpleClient.Service
+	ethClient *ethclient.Client
 }
 
-func NewApiImplementation() Api {
-	return &apiImplementation{
-		client: simpleEthClient.NewService(&simpleEthClient.Resources{
-			API: simpleEthClient.NewApiImplementation(
-				axieCommon.RoninProviderFree,
-			),
-		}),
+func NewApiImplementation(client *ethclient.Client) Api {
+	if client == nil {
+		panic("error client  cannot be nil")
 	}
+
+	return &apiImplementation{
+		client: simpleClient.NewService(&simpleClient.Resources{
+			API: simpleClient.NewApiImplementation(client),
+		}),
+		ethClient: client,
+	}
+}
+
+func SafeNewApiImplementation(client *ethclient.Client) (Api, error) {
+	if client == nil {
+		return nil, errors.New("error client cannot be nil")
+	}
+
+	return &apiImplementation{
+		client: simpleClient.NewService(&simpleClient.Resources{
+			API: simpleClient.NewApiImplementation(client),
+		}),
+		ethClient: client,
+	}, nil
 }
 
 func (api *apiImplementation) MakePayment(
@@ -38,19 +62,19 @@ func (api *apiImplementation) MakePayment(
 		return
 	}
 
-	scholarAddress, err := simpleAddress.GetAddressFromPrivateKey(teamPk)
+	scholarAddress, err := simpleCommon.GetAddressFromPrivateKey(teamPk)
 	if err != nil {
 		return
 	}
 
 	balance, err := api.GetBalance(
-		axieAddress.CommonToRoninAddress(scholarAddress), token,
+		axieCommon.CommonToRoninAddress(scholarAddress), token,
 	)
 	if err != nil {
 		return
 	}
 
-	if !simpleAddress.SafeBalanceIsValid(balance.Balance) {
+	if !simpleCommon.SafeBalanceIsValid(balance.Balance) {
 		err = fmt.Errorf("balance is %s", balance)
 		return
 	}
@@ -64,12 +88,12 @@ func (api *apiImplementation) MakePayment(
 		return
 	}
 
-	tokenContract, err := axieAddress.GetTokenAddress(token)
+	tokenContract, err := axieCommon.GetTokenAddress(token)
 	if err != nil {
 		return
 	}
 
-	scholarResponse, err := api.client.SendTransaction(
+	scholarResponse, err := api.client.SimpleSendTransaction(
 		scholarQuantity,
 		teamPk,
 		scholar.ScholarAddress.ToCommonAddress(),
@@ -80,12 +104,12 @@ func (api *apiImplementation) MakePayment(
 	}
 	resp.ScholarPayment = scholarResponse.Transaction
 
-	managerQuantity, err := axieMath.SubtractBigInt(balance.Balance, scholarQuantity)
+	managerQuantity, err := utils.SubtractBigInt(balance.Balance, scholarQuantity)
 	if err != nil {
 		return
 	}
 
-	managerResponse, err := api.client.SendTransaction(
+	managerResponse, err := api.client.SimpleSendTransaction(
 		managerQuantity,
 		teamPk,
 		manager.ToCommonAddress(),
@@ -103,12 +127,13 @@ func (api *apiImplementation) Claim(
 		return
 	}
 
-	commonAddress, err := simpleAddress.GetAddressFromPrivateKey(teamPk)
+	commonAddress, err := simpleCommon.GetAddressFromPrivateKey(teamPk)
 	if err != nil {
 		return
 	}
 
-	claimable, err := claims.GetClaimableSlp(commonAddress)
+	roninAddress := axieCommon.CommonToRoninAddress(commonAddress)
+	claimable, err := api.GetClaimableSlp(roninAddress)
 	if err != nil {
 		return
 	}
@@ -126,15 +151,61 @@ func (api *apiImplementation) Claim(
 		return
 	}
 
-	err = claims.ClaimSlp(
+	client := http.Client{}
+	req, err := http.NewRequest(http.MethodPost, axieCommon.RoninGraphqlUri, nil)
+	if err != nil {
+		return
+	}
+
+	req.Header = http.Header{
+		"Authorization": []string{fmt.Sprintf("Bearer %s", jwt)},
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+
+	var data map[string]map[string]string
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return
+	}
+
+	signature, ok := data["blockchain_relate"]["signature"]
+	if !ok {
+		err = errors.New("error checking dict keys")
+		return
+	}
+
+	nonce, err := api.ethClient.NonceAt(context.Background(), commonAddress, nil)
+	if err != nil {
+		return
+	}
+
+	slpInstance, err := slp.NewSlp(commonAddress, api.ethClient)
+	if err != nil {
+		return
+	}
+
+	checkpoint, err := slpInstance.Checkpoint(
+		&bind.TransactOpts{
+			Nonce: big.NewInt(int64(nonce)),
+		},
+		commonAddress,
+		big.NewInt(int64(claimable.Quantity)),
 		nil,
-		jwt,
-		axieAddress.CommonToRoninAddress(commonAddress),
-		claimable,
+		[]byte(signature),
 	)
 	if err != nil {
 		return
 	}
+
+	err = api.ethClient.SendTransaction(context.Background(), checkpoint)
 	return
 }
 
@@ -178,12 +249,12 @@ func (api *apiImplementation) GetBalance(
 	address axieCommon.RoninAddress,
 	token string,
 ) (resp *BalanceResponse, err error) {
-	tokenAddress, err := axieAddress.GetTokenAddress(token)
+	tokenAddress, err := axieCommon.GetTokenAddress(token)
 	if err != nil {
 		return
 	}
 
-	balanceResp, err := api.client.CheckBalance(address.ToCommonAddress(), tokenAddress)
+	balanceResp, err := api.client.SimpleCheckBalance(address.ToCommonAddress(), tokenAddress)
 	if err != nil {
 		return
 	}
@@ -196,14 +267,33 @@ func (api *apiImplementation) GetBalance(
 	return
 }
 
-func (api *apiImplementation) GetClaimableSLP(
+func (api *apiImplementation) GetClaimableSlp(
 	address axieCommon.RoninAddress,
 ) (resp *ClaimableResponse, err error) {
-	claimable, err := claims.GetClaimableSlp(address.ToCommonAddress())
+	uri := fmt.Sprintf(axieCommon.RoninSlpClaimUri, address)
+
+	httpResp, err := http.Get(uri)
 	if err != nil {
 		return
 	}
 
+	body, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return
+	}
+
+	var claimable int
+	var ok bool
+	if claimable, ok = data["claimable_total"].(int); !ok {
+		err = errors.New("claimable_total not present in response")
+		return
+	}
 	resp = &ClaimableResponse{
 		Quantity: claimable,
 		Address:  address,
@@ -211,13 +301,13 @@ func (api *apiImplementation) GetClaimableSLP(
 	return
 }
 
-func (api *apiImplementation) GetClaimableBatchSLP(
+func (api *apiImplementation) GetClaimableBatchSlp(
 	addresses []axieCommon.RoninAddress,
 ) (resp *ClaimableBatchResponse, err error) {
 	for _, address := range addresses {
 		resp.Total += 1
 		var claimable *ClaimableResponse
-		claimable, err = api.GetClaimableSLP(address)
+		claimable, err = api.GetClaimableSlp(address)
 		if err != nil {
 			resp.Errors = append(resp.Errors, err)
 			continue

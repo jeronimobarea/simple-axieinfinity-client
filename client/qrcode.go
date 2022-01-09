@@ -1,7 +1,7 @@
 package axieinfinity
 
 import (
-	simpleCommon "github.com/jeronimobarea/simple-ethereum/common"
+	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
 )
 
 type QrResponse struct {

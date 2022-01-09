@@ -4,7 +4,7 @@ import (
 	"errors"
 	"math/big"
 
-	axieCommon "github.com/jeronimobarea/simple-axieinfinity/common"
+	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
 )
 
 type BalanceResponse struct {
