@@ -17,10 +17,6 @@ func BigIntPercentage(x, y *big.Int) (*big.Int, error) {
 	return &z, nil
 }
 
-func Percentage(balance float32, percentage int) float32 {
-	return balance / 100 * float32(percentage)
-}
-
 func SubtractBigInt(x, y *big.Int) (*big.Int, error) {
 	if x == nil || y == nil {
 		return nil, errors.New("inputs can not be nil")

@@ -36,27 +36,6 @@ func Test_BigIntPercentage_NilValue(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func Test_Percentage_CorrectInput(t *testing.T) {
-	balance := float32(100)
-	percentage := 10
-	res := Percentage(balance, percentage)
-	assert.Equal(t, float32(10), res)
-}
-
-func Test_Percentage_ZeroPercentage(t *testing.T) {
-	balance := float32(100)
-	percentage := 0
-	res := Percentage(balance, percentage)
-	assert.Equal(t, float32(0), res)
-}
-
-func Test_Percentage_ZeroBalance(t *testing.T) {
-	balance := float32(0)
-	percentage := 10
-	res := Percentage(balance, percentage)
-	assert.Equal(t, float32(0), res)
-}
-
 func Test_SubtractBigInt_CorrectInput(t *testing.T) {
 	x := big.NewInt(100)
 	y := big.NewInt(10)
