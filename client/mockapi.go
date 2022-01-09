@@ -1,9 +1,10 @@
 package axieinfinity
 
 import (
-	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
 	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
 	"github.com/stretchr/testify/mock"
+
+	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
 )
 
 type MockApi struct {
