@@ -5,11 +5,16 @@ import (
 	"math/big"
 )
 
-func BigIntPercentage(balance *big.Int, percent int) (float32, error) {
-	if balance == nil {
-		return 0, errors.New("error balance can not be nil")
+func BigIntPercentage(x, y *big.Int) (*big.Int, error) {
+	if x == nil || y == nil {
+		return nil, errors.New("values cannot be nil")
 	}
-	return Percentage(float32(balance.Int64()), percent), nil
+
+	percent := big.NewInt(100)
+	var z big.Int
+	z.Div(x, percent)
+	z.Mul(&z, y)
+	return &z, nil
 }
 
 func Percentage(balance float32, percentage int) float32 {
@@ -20,6 +25,7 @@ func SubtractBigInt(x, y *big.Int) (*big.Int, error) {
 	if x == nil || y == nil {
 		return nil, errors.New("inputs can not be nil")
 	}
-	res := x.Int64() - y.Int64()
-	return big.NewInt(res), nil
+	var z big.Int
+	z.Sub(x, y)
+	return &z, nil
 }

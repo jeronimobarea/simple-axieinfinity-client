@@ -1,8 +1,9 @@
 package axieinfinity
 
 import (
-	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
 	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
+
+	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
 )
 
 type (

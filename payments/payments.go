@@ -3,28 +3,31 @@ package payments
 import (
 	"math/big"
 
+	"github.com/jeronimobarea/simple-ethereum-client/common"
+
 	"github.com/jeronimobarea/simple-axieinfinity-client/utils"
 )
 
 func CalculatePaymentQuantity(
-	balance *big.Int, percent int, rules []int,
-) (quantity *big.Int, err error) {
-	var rulesSum int
+	balance, percent *big.Int, rules []int64,
+) (quantity *big.Int, valid bool, err error) {
+	var rulesSum int64
 	for _, q := range rules {
 		rulesSum += q
 	}
 
-	floatQuantity, err := utils.BigIntPercentage(balance, percent)
+	quantity, err = utils.BigIntPercentage(balance, percent)
 	if err != nil {
+		valid = false
 		return
 	}
 
-	floatQuantity += float32(rulesSum)
-	if floatQuantity <= 0 {
+	quantity.Add(quantity, big.NewInt(rulesSum))
+
+	valid = common.SafeBalanceIsValid(quantity)
+	if !valid {
 		quantity = big.NewInt(0)
 		return
 	}
-
-	quantity = big.NewInt(int64(floatQuantity))
 	return
 }

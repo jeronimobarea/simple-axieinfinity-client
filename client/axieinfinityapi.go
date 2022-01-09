@@ -74,12 +74,12 @@ func (api *apiImplementation) MakePayment(
 		return
 	}
 
-	if !simpleCommon.SafeBalanceIsValid(balance.Balance) {
-		err = fmt.Errorf("balance is %s", balance)
+	_, err = simpleCommon.BalanceIsValid(balance.Balance)
+	if err != nil {
 		return
 	}
 
-	scholarQuantity, err := payments.CalculatePaymentQuantity(
+	scholarQuantity, valid, err := payments.CalculatePaymentQuantity(
 		balance.Balance,
 		scholar.ScholarPercent,
 		scholar.ScholarPayout,
@@ -93,29 +93,43 @@ func (api *apiImplementation) MakePayment(
 		return
 	}
 
-	scholarResponse, err := api.client.SimpleSendTransaction(
-		scholarQuantity,
-		teamPk,
-		scholar.ScholarAddress.ToCommonAddress(),
-		tokenContract,
-	)
-	if err != nil {
-		return
+	var scholarResponse *simpleClient.TransactionResponse
+	if valid {
+		scholarResponse, err = api.client.SimpleSendTransaction(
+			scholarQuantity,
+			teamPk,
+			scholar.ScholarAddress.ToCommonAddress(),
+			tokenContract,
+		)
 	}
-	resp.ScholarPayment = scholarResponse.Transaction
-
-	managerQuantity, err := utils.SubtractBigInt(balance.Balance, scholarQuantity)
-	if err != nil {
-		return
+	resp.Results[scholar.ScholarAddress] = &PaymentResponseResult{
+		Error:       err,
+		Transaction: scholarResponse.Transaction,
 	}
 
-	managerResponse, err := api.client.SimpleSendTransaction(
-		managerQuantity,
-		teamPk,
-		manager.ToCommonAddress(),
-		tokenContract,
-	)
-	resp.ManagerPayment = managerResponse.Transaction
+	err = nil
+
+	var managerQuantity *big.Int
+	managerQuantity, err = utils.SubtractBigInt(balance.Balance, scholarQuantity)
+
+	var managerResponse *simpleClient.TransactionResponse
+	if err == nil {
+		if simpleCommon.SafeBalanceIsValid(managerQuantity) {
+			managerResponse, err = api.client.SimpleSendTransaction(
+				managerQuantity,
+				teamPk,
+				manager.ToCommonAddress(),
+				tokenContract,
+			)
+		} else {
+			err = errors.New("invalid manager balance")
+		}
+	}
+
+	resp.Results[scholar.ScholarAddress] = &PaymentResponseResult{
+		Error:       err,
+		Transaction: managerResponse.Transaction,
+	}
 	return
 }
 

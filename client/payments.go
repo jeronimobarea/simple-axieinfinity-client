@@ -3,17 +3,17 @@ package axieinfinity
 import (
 	"github.com/ethereum/go-ethereum/core/types"
 	simpleCommon "github.com/jeronimobarea/simple-ethereum-client/common"
+	"math/big"
 
 	axieCommon "github.com/jeronimobarea/simple-axieinfinity-client/common"
 )
 
 type (
 	ScholarPaymentData struct {
-		Name           string                      `json:"name"`
 		TeamAddress    simpleCommon.PrivateAddress `json:"teamAddress"`
 		ScholarAddress axieCommon.RoninAddress     `json:"scholarAddress"`
-		ScholarPercent int                         `json:"scholarPercent"`
-		ScholarPayout  []int                       `json:"scholarPayout"`
+		ScholarPercent *big.Int                    `json:"scholarPercent"`
+		ScholarPayout  []int64                     `json:"scholarPayout"`
 	}
 
 	PaymentData struct {
@@ -21,12 +21,13 @@ type (
 		Scholars       []*ScholarPaymentData   `json:"scholars"`
 	}
 
+	PaymentResponseResult struct {
+		Error       error              `json:"error"`
+		Transaction *types.Transaction `json:"transaction"`
+	}
+
 	PaymentResponse struct {
-		Failed         int                 `json:"failed"`
-		Pending        int                 `json:"pending"`
-		Results        []map[string]string `json:"results"`
-		ScholarPayment *types.Transaction  `json:"scholarPayment"`
-		ManagerPayment *types.Transaction  `json:"managerPayment"`
+		Results map[axieCommon.RoninAddress]*PaymentResponseResult `json:"results"`
 	}
 )
 
